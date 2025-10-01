@@ -1,0 +1,304 @@
+{% extends "dashboard_base.html" %}
+{% block title %}Analytics Dashboard{% endblock %}
+
+{% block head %}
+    <link href="{{ url_for('css', path='analytics.css') }}" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+{% endblock %}
+
+{% block page_content %}
+<div class="main-content">
+    <div class="top-graphs-section">
+        <div class="report-section line-chart">
+            <div class="report-header">
+                <h2>Response statistics</h2>
+                <div class="chart-legend-row">
+                    <div class="legend-item"><span class="legend-color-box" style="background-color: #007bff;"></span>Processed by Suvvy</div>
+                    <div class="legend-item"><span class="legend-color-box" style="background-color: #28a745;"></span>Total messages received</div>
+                    <div class="legend-item"><span class="legend-color-box" style="background-color: #dc3545;"></span>The number of dialogs</div>
+                </div>
+            </div>
+            <div class="chart-container">
+                <canvas id="responseStatisticsChart"></canvas>
+            </div>
+        </div>
+
+        <div class="report-section small-line-chart">
+            <div class="report-header">
+                <h2></h2> <div class="chart-legend-row">
+                    <div class="legend-item"><span class="legend-color-box" style="background-color: #28a745;"></span>The average cost of dialogue (USD)</div>
+                </div>
+            </div>
+            <div class="chart-container">
+                <canvas id="averageCostChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="pie-charts-section">
+        <div class="report-section pie-chart-container">
+            <div class="report-header">
+                <h3>Effectiveness of Suvvy</h3>
+                <div class="chart-legend-row">
+                    <div class="legend-item"><span class="legend-color-box" style="background-color: #cccccc;"></span>Not processed by Suvvy</div>
+                    <div class="legend-item"><span class="legend-color-box" style="background-color: #28a745;"></span>Processed by Suvvy</div>
+                </div>
+            </div>
+            <div class="chart-container">
+                <canvas id="effectivenessChart"></canvas>
+            </div>
+        </div>
+
+        <div class="report-section pie-chart-container">
+            <div class="report-header">
+                <h3>Tags statistics</h3>
+                <div class="chart-legend-row">
+                    <div class="legend-item"><span class="legend-color-box" style="background-color: #ffc107;"></span>Sales Inquiry</div>
+                    <div class="legend-item"><span class="legend-color-box" style="background-color: #17a2b8;"></span>Support Request</div>
+                    <div class="legend-item"><span class="legend-color-box" style="background-color: #cccccc;"></span>Dialogs without tags</div>
+                </div>
+            </div>
+            <div class="chart-container">
+                <canvas id="tagsChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // --- Dynamic Data Generation ---
+    // Helper to generate deterministic random numbers based on the date for daily changes
+    const getSeededRandom = (seed) => {
+        const x = Math.sin(seed) * 10000;
+        return x - Math.floor(x);
+    };
+
+    // Generate labels for the last 7 days
+    const labels = [];
+    const today = new Date();
+    for (let i = 6; i >= 0; i--) {
+        const d = new Date(today);
+        d.setDate(today.getDate() - i);
+        // Format as M/D/YYYY
+        labels.push(`${d.getMonth() + 1}/${d.getDate()}/${d.getFullYear()}`);
+    }
+
+    // --- Generate data for Response Statistics Chart ---
+    const processedBySuvvyData = [];
+    const totalMessagesData = [];
+    const dialogsData = [];
+    for (let i = 0; i < 7; i++) {
+        const daySeed = today.getDate() - (6 - i);
+        const suvvyCount = Math.floor(getSeededRandom(daySeed * 11) * 150) + 50; // 50-200
+        const totalMessages = suvvyCount + Math.floor(getSeededRandom(daySeed * 22) * 50) + 10; // suvvy + 10-60
+        const dialogs = Math.floor(totalMessages * (getSeededRandom(daySeed * 33) * 0.3 + 0.5)); // 50-80% of messages
+        
+        processedBySuvvyData.push(suvvyCount);
+        totalMessagesData.push(totalMessages);
+        dialogsData.push(dialogs);
+    }
+
+    const responseStatsData = {
+        labels: labels,
+        datasets: [
+            { label: 'Processed by Suvvy', data: processedBySuvvyData, borderColor: '#007bff', backgroundColor: 'rgba(0, 123, 255, 0.2)', fill: false, tension: 0.4, pointRadius: 5, pointBackgroundColor: '#007bff', pointBorderColor: '#fff', pointHoverRadius: 7 },
+            { label: 'Total messages received', data: totalMessagesData, borderColor: '#28a745', backgroundColor: 'rgba(40, 167, 69, 0.2)', fill: false, tension: 0.4, pointRadius: 5, pointBackgroundColor: '#28a745', pointBorderColor: '#fff', pointHoverRadius: 7 },
+            { label: 'The number of dialogs', data: dialogsData, borderColor: '#dc3545', backgroundColor: 'rgba(220, 53, 69, 0.2)', fill: false, tension: 0.4, pointRadius: 5, pointBackgroundColor: '#dc3545', pointBorderColor: '#fff', pointHoverRadius: 7 }
+        ]
+    };
+
+    // --- Generate data for Average Cost Chart ---
+    const avgCostPoints = [];
+    for (let i = 0; i < 7; i++) {
+        const daySeed = today.getDate() - (6 - i);
+        const cost = getSeededRandom(daySeed * 44) * 0.005 + 0.001; // 0.001 to 0.006
+        avgCostPoints.push(cost);
+    }
+    const averageCostData = {
+        labels: labels,
+        datasets: [
+            { label: 'The average cost of dialogue (USD)', data: avgCostPoints, borderColor: '#28a745', backgroundColor: 'rgba(40, 167, 69, 0.2)', fill: false, tension: 0.4, pointRadius: 5, pointBackgroundColor: '#28a745', pointBorderColor: '#fff', pointHoverRadius: 7 }
+        ]
+    };
+
+    // --- Generate data for Pie Charts (based on today's totals) ---
+    const todaySeed = today.getDate();
+    const totalSuvvyToday = processedBySuvvyData[6];
+    const totalDialogsToday = dialogsData[6];
+    const notProcessedBySuvvy = Math.max(0, totalDialogsToday - totalSuvvyToday);
+
+    const effectivenessData = {
+        labels: ['Not processed by Suvvy', 'Processed by Suvvy'],
+        datasets: [{
+            data: [notProcessedBySuvvy, totalSuvvyToday],
+            backgroundColor: ['#cccccc', '#28a745'],
+            hoverOffset: 4,
+            borderWidth: 0
+        }]
+    };
+
+    const dialogsWithoutTags = Math.floor(getSeededRandom(todaySeed * 55) * (totalDialogsToday * 0.2)); // 0-20% without tags
+    const salesTag = Math.floor(getSeededRandom(todaySeed * 66) * (totalDialogsToday * 0.5));
+    const supportTag = Math.max(0, totalDialogsToday - dialogsWithoutTags - salesTag);
+
+    const tagsStatsData = {
+        labels: ['Dialogs without tags', 'Sales Inquiry', 'Support Request'],
+        datasets: [{
+            data: [dialogsWithoutTags, salesTag, supportTag],
+            backgroundColor: ['#cccccc', '#ffc107', '#17a2b8'], // Grey, Yellow, Teal
+            hoverOffset: 4,
+            borderWidth: 0
+        }]
+    };
+
+    // --- Chart Initialization ---
+
+    // Response Statistics Line Chart
+    const responseStatsCtx = document.getElementById('responseStatisticsChart').getContext('2d');
+    new Chart(responseStatsCtx, {
+        type: 'line',
+        data: responseStatsData,
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false, // We'll use custom HTML legend
+                },
+                tooltip: {
+                     mode: 'index',
+                     intersect: false,
+                }
+            },
+            scales: {
+                x: {
+                    grid: {
+                        display: false // Hide X-axis grid lines
+                    }
+                },
+                y: {
+                    beginAtZero: false, // Allows Y-axis to start from value like 0.94
+                    ticks: {
+                        callback: function(value) {
+                            return value.toFixed(2); // Format Y-axis labels
+                        }
+                    },
+                    grid: {
+                        color: 'rgba(0,0,0,0.05)' // Light grid lines
+                    }
+                }
+            }
+        }
+    });
+
+    // Average Cost of Dialogue Line Chart (scatter plot look)
+    const averageCostCtx = document.getElementById('averageCostChart').getContext('2d');
+    new Chart(averageCostCtx, {
+        type: 'line', // Can use 'line' with point styling to mimic scatter
+        data: averageCostData,
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false, // Using custom HTML legend
+                },
+                tooltip: {
+                     mode: 'index',
+                     intersect: false,
+                }
+            },
+            scales: {
+                x: {
+                    grid: {
+                        display: false
+                    }
+                },
+                y: {
+                    beginAtZero: false, // Allows starting from specific value
+                    ticks: {
+                        callback: function(value) {
+                            return value.toFixed(5); // Format for small decimal values
+                        }
+                    },
+                    grid: {
+                        color: 'rgba(0,0,0,0.05)'
+                    }
+                }
+            }
+        }
+    });
+
+    // Effectiveness of Suvvy Pie Chart
+    const effectivenessCtx = document.getElementById('effectivenessChart').getContext('2d');
+    new Chart(effectivenessCtx, {
+        type: 'pie',
+        data: effectivenessData,
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false, // Using custom HTML legend
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.label || '';
+                            if (label) { label += ': '; }
+                            if (context.parsed !== null) {
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = total > 0 ? ((context.parsed / total) * 100).toFixed(1) : 0;
+                                return `${label}${context.parsed} (${percentage}%)`;
+                            }
+                            return label;
+                        }
+                    }
+                }
+            },
+            elements: {
+                arc: {
+                    borderWidth: 0 // No borders on slices for a cleaner look
+                }
+            }
+        }
+    });
+
+    // Tags Statistics Pie Chart
+    const tagsCtx = document.getElementById('tagsChart').getContext('2d');
+    new Chart(tagsCtx, {
+        type: 'pie',
+        data: tagsStatsData,
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false, // Using custom HTML legend
+                },
+                 tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.label || '';
+                            if (label) { label += ': '; }
+                            if (context.parsed !== null) {
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = total > 0 ? ((context.parsed / total) * 100).toFixed(1) : 0;
+                                return `${label}${context.parsed} (${percentage}%)`;
+                            }
+                            return label;
+                        }
+                    }
+                }
+            },
+            elements: {
+                arc: {
+                    borderWidth: 0
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}
