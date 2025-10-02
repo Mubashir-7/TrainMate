@@ -42,9 +42,33 @@ Deployment: Docker + NVIDIA GPU support (optional)
 
 📦 Requirements
 
-Python 3.10+
+fastapi
+uvicorn[standard]
+numpy<2.0
+jinja2
+pydantic-settings
+transformers>=4.42
+sentencepiece             # tokenizer deps
+accelerate
+torch                       # Generic requirement for CPU or GPU
+peft
+bitsandbytes              # for 8-bit quantization
+datasets                  # for handling training data
+fsspec[http]<=2024.9.0    # Pinned to resolve conflict with `datasets`
+trl>=0.8.6                # for the SFTTrainer, pinned to a recent version
+tqdm                      # progress bars
+pypdf
+python-docx
+llama-cpp-python          # comment if not using gguf
+python-multipart          # For FastAPI file uploads
+sqlalchemy                # For database ORM
+python-jose[cryptography] # For JWT tokens
+passlib[bcrypt]           # For password hashing
+requests
+itsdangerous              # For signing session cookies for flash messages
+xmltodict
+protobuf
 
-(Optional) NVIDIA GPU + CUDA Toolkit for accelerated inference
 
 Docker & Docker Compose (recommended)
 
@@ -174,3 +198,4 @@ Pull requests are welcome! Please open an issue before submitting major changes.
 🌟 Final Notes
 
 TrainMate is built to give you full control over your AI chatbot — right at the edge. It runs directly on your local machine or private server, learning from your data and delivering accurate, domain-specific answers in real-time.
+
